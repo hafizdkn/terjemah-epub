@@ -62,22 +62,25 @@ class GoTranslate:
             return text
 
     def extract_element(self, element):
-        elements = (
-            [element.text]
-            + list(chain(*([] if c.tag in self.list_ignore_tag else [c.text, c.tail] for c in element.getchildren())))
-            + [element.tail]
-        )
-        return list(filter(None, elements))
+        # elements = (
+        #     [element.text]
+        #     + list(chain(*([] if c.tag in self.list_ignore_tag else [c.text, c.tail] for c in element.getchildren())))
+        #     + [element.tail]
+        # )
+        # return list(filter(None, elements))
+        return "".join(element.itertext()).strip()
 
-    def parser_bs4(self, html_text):
+    def parse_bs4(self, html_text):
         ignore_class = self.list_ignore_class
         target_tag = self.list_target_tag
 
         self.sc_bs4 = BeautifulSoup(html_text, "html.parser")
-        elements = self.sc_bs4.find_all(target_tag, class_=lambda x: x not in ignore_class)
+        elements = self.sc_bs4.find_all(
+            target_tag, class_=lambda x: x not in ignore_class
+        )
         return elements
 
-    def parser_lxml(self, elements):
+    def parse_lxml(self, elements):
         return [html.fromstring(str(element)) for element in elements]
 
     def insert_new_js(self):
@@ -103,15 +106,14 @@ class GoTranslate:
             source = soup.find(elm.name)
             elm.clear()
 
-            new_elm_dtls = soup.new_tag("details", attrs={"style": "text-decoration: none;"})
+            new_elm_dtls = soup.new_tag("div")
             new_elm_summary = soup.new_tag(
-                "summary",
+                "div",
                 attrs={
-                    "style": "display:inline;cursor: pointer;",
+                    "style": "display:inline;cursor:pointer;list-style:none;",
                 },
             )
             new_elm_dtls.insert(0, new_elm_summary)
-            new_elm_summary.append("❱ ")
             new_elm_summary.insert(1, BeautifulSoup(str(element), "html.parser"))
 
             new_elm_dtls.append(new_elm_summary)
@@ -120,15 +122,17 @@ class GoTranslate:
             for content in reversed(source.contents):
                 ori_text.append(str(content.extract()))
 
-            div_ = soup.new_tag(
-                "div",
+            mark = soup.new_tag(
+                "mark",
                 attrs={
-                    "class": "div-class",
-                    "style": "background-color: rgb(173,216,230);",
+                    # "class": "div-class",
+                    # "style": "background-color: rgb(173,216,230)",
                 },
             )
             ori_text = "".join(reversed(ori_text))
-            div_.insert(1, BeautifulSoup(ori_text, "html.parser"))
+            div_ = soup.new_tag("div")
+            div_.insert(0, mark)
+            mark.insert(1, BeautifulSoup(ori_text, "html.parser"))
             new_elm_dtls.append(div_)
 
             elm.insert(0, BeautifulSoup(str(new_elm_dtls), "html.parser"))
@@ -137,7 +141,7 @@ class GoTranslate:
             elm = self.sc_bs4_filtered[idx]
             elm.insert(1, BeautifulSoup(element, "html.parser"))
 
-    def run_parser(self, elements):
+    def run_parse(self, elements):
         self.insert_new_js()
         for idx, sc_lxml in enumerate(elements):
             tlist = self.extract_element(sc_lxml)
@@ -160,21 +164,17 @@ class GoTranslate:
         self.set_ignore_tag()
 
         total_file = self.get_length_file(self.list_target_file)
-        print("\n[==] Total file:", total_file)
+        print("\n[==] Total file          :", total_file)
 
-        with tqdm(
-            total=total_file,
-            desc="Prosess",
-            bar_format="{l_bar}{bar}{r_bar}",
-        ) as pbar:
-
+        with tqdm(total=total_file) as pbar:
             for file in self.list_target_file:
-                pbar.write(f"[==] Prosess file: {self.get_name_file(file)}")
-                sc_html = self.read_file(file)
-                self.sc_bs4_filtered = self.parser_bs4(sc_html)
+                pbar.set_description(f"[..] Proses: {self.get_name_file(file)}")
 
-                elements = self.parser_lxml(self.sc_bs4_filtered)
-                self.run_parser(elements)
+                sc_html = self.read_file(file)
+                self.sc_bs4_filtered = self.parse_bs4(sc_html)
+
+                elements = self.parse_lxml(self.sc_bs4_filtered)
+                self.run_parse(elements)
 
                 self.write_to_file(file, self.sc_bs4)
                 pbar.update(1)
