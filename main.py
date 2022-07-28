@@ -13,6 +13,8 @@ abs_config_path = Path(config_path).absolute()
 
 
 def main():
+    os.system("cls" if os.name == "nt" else "clear")
+    print("=====" * 5)
     config = ReadConfig(abs_config_path)
 
     if len(sys.argv) <= 1:
@@ -26,7 +28,7 @@ def main():
     if not str(src).endswith(".epub"):
         return "File yang di-run harus berupa file epub!"
 
-    print(f"[==] Output file: {dst}")
+    print(f"[==] Output file         : {dst}")
 
     extract_epub = ExtractEpub(src, dst, f_epub)
     dst = extract_epub.extract_epub()
@@ -38,7 +40,7 @@ def main():
     extract_epub.path_oebps = path_oebps
     extract_epub.move_min_js()
 
-    print(f"[..] Terjemahkan Epub -> {f_epub}")
+    print(f"[..] Terjemahkan Epub    : {f_epub}")
 
     try:
         translate = GoTranslate(list_file, abs_config_path)
@@ -48,6 +50,8 @@ def main():
         os.system(f"rm -rf '{dst}'")
     else:
         translate.run()
+        extract_epub.create_epub()
+    print("=====" * 5)
 
 
 if __name__ == "__main__":
