@@ -1,6 +1,7 @@
 from datetime import datetime
 from pathlib import Path
 import zipfile
+import shutil
 import os
 
 from utilities.clean_string import clean_string
@@ -26,8 +27,8 @@ class ExtractEpub:
             os.makedirs(self.dst, exist_ok=True)
         else:
             folder_name = self.f_epub
-            print(f"[XX] Folder sudah ada -> {folder_name}")
-            print(f"[OK] Hapus folder -> {folder_name}")
+            print(f"[XX] Folder sudah ada    : {folder_name}")
+            print(f"[OK] Hapus folder        : {folder_name}")
             os.system(f"rm -rf {self.dst}")
 
     def move_min_js(self):
@@ -46,9 +47,23 @@ class ExtractEpub:
         with zipfile.ZipFile(self.src, "r") as zip_ref:
             zip_ref.extractall(self.dst)
 
+    def remove(self):
+        r = lambda x: shutil.rmtree(x) if Path(x).is_dir() else os.remove(x)
+        f = [r(f) for f in Path(self.dst).iterdir() if not str(f).endswith(".epub")]
+        print("[..] Hapus folder success : OK")
+
+    def create_epub(self):
+        print("[..] Proses membuat epub  : OK")
+        cur_path = self.dst
+        zip_file = str(cur_path / self.f_epub)
+        shutil.make_archive(zip_file, "zip", cur_path)
+        os.rename(f"{zip_file}.zip", f"{zip_file}.epub")
+        print("[OK] Membuat epub success : OK")
+        self.remove()
+
     def extract_epub(self):
-        print("[..] Ektrak epub...")
+        print("[..] Ektrak epub         : OK")
         self.unzip()
         self.format_to_epub()
-        print("[OK] Ektrak epub success!")
+        print("[..] Ektrak epub success : OK")
         return self.dst
